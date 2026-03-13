@@ -1,52 +1,81 @@
-from flask import Flask,render_template,request,jsonify
+from flask import Flask, render_template, request, jsonify
 import cv2
 import numpy as np
 import pickle
+import os
 
-app=Flask(__name__)
+app = Flask(__name__)
 
-model=pickle.load(open("rf_parkinsons_model.pkl","rb"))
+# Load trained model
+try:
+    with open("rf_parkinsons_model.pkl", "rb") as f:
+        model = pickle.load(f)
+    print("Model loaded successfully")
+except Exception as e:
+    print("Error loading model:", e)
+    model = None
 
+
+# Feature extraction function
 def extract_features(img):
 
-    gray=cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    blur=cv2.GaussianBlur(gray,(5,5),0)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
-    edges=cv2.Canny(blur,50,150)
+    edges = cv2.Canny(blur, 50, 150)
 
-    feature=np.count_nonzero(edges)
+    feature = np.count_nonzero(edges)
 
     return feature
 
 
+# Home page
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-@app.route("/predict",methods=["POST"])
+# Prediction route
+@app.route("/predict", methods=["POST"])
 def predict():
 
-    file=request.files["file"]
+    if "file" not in request.files:
+        return jsonify({"result": "No file uploaded"})
 
-    file_bytes=np.frombuffer(file.read(),np.uint8)
+    file = request.files["file"]
 
-    img=cv2.imdecode(file_bytes,cv2.IMREAD_COLOR)
+    if file.filename == "":
+        return jsonify({"result": "No file selected"})
 
-    feature=extract_features(img)
+    try:
+        file_bytes = np.frombuffer(file.read(), np.uint8)
 
-    feature=np.array([[feature]])
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-    prediction=model.predict(feature)
+        if img is None:
+            return jsonify({"result": "Invalid image"})
 
-    if prediction[0]==0:
-        result="Healthy"
-    else:
-        result="Parkinson Risk"
+        feature = extract_features(img)
 
-    return jsonify({"result":result})
+        feature = np.array([[feature]])
+
+        prediction = model.predict(feature)
+
+        if prediction[0] == 0:
+            result = "Healthy"
+        else:
+            result = "Parkinson Risk"
+
+        return jsonify({"result": result})
+
+    except Exception as e:
+        return jsonify({"result": "Error processing image"})
 
 
-if __name__=="__main__":
-    app.run(debug=True)
+# Run server
+if __name__ == "__main__":
+
+    port = int(os.environ.get("PORT", 5000))
+
+    app.run(host="0.0.0.0", port=port)
