@@ -1,24 +1,6 @@
-# Core Web Interface
-streamlit
-
-# Image Processing
-opencv-python
-
-# Voice Analysis
-# parselmouth
-scipy
-joblib
-
-# Data Handling & Numerical Operations
-pandas
+flask
+gunicorn
 numpy
-
-# Machine Learning
+opencv-python-headless
 scikit-learn
-
-# Visualization (Optional, if you're plotting results)
-matplotlib
-seaborn
-
-# Typing Test
-pynput
+joblib
